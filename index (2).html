@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ko" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 영어 문장 형식 분석기 (English Pattern Analyzer)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons for Modern UI -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts Inter & Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans KR', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                        },
+                    },
+                    boxShadow: {
+                        'premium': '0 10px 30px -5px rgba(139, 92, 246, 0.15), 0 4px 6px -2px rgba(139, 92, 246, 0.05)',
+                        'inner-soft': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Custom scrollbar for premium look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col antialiased">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-primary-500/20">
+                    <i data-lucide="sparkles" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 tracking-tight leading-none">AI 영어 문장 형식 분석기</h1>
+                    <span class="text-xs text-slate-500">English Sentence Pattern Analyzer</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button onclick="toggleSettings()" class="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition duration-200" title="API 설정">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                </button>
+                <a href="#history-section" class="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition duration-200" title="학습 기록">
+                    <i data-lucide="history" class="w-5 h-5"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- API Settings Panel (Hidden by default) -->
+        <div id="settings-panel" class="hidden mb-6 bg-white border border-slate-100 rounded-2xl p-6 shadow-premium transition-all duration-300">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-md font-semibold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="key" class="w-4 h-4 text-primary-500"></i> API Key 설정
+                </h3>
+                <button onclick="toggleSettings()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <p class="text-sm text-slate-500 mb-4 leading-relaxed">
+                기본적으로 Canvas 러닝타임 환경에서는 별도의 API 키 없이 분석기가 작동합니다. 
+                만약 외부 브라우저 환경에서 직접 사용하시려면 아래에 개인 <strong>Google Gemini API Key</strong>를 입력해 주세요.
+            </p>
+            <div class="flex gap-2">
+                <input type="password" id="api-key-input" placeholder="AIZAcy..." class="flex-1 px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition duration-200 text-sm">
+                <button onclick="saveApiKey()" class="px-5 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition duration-200 text-sm font-medium">
+                    저장
+                </button>
+            </div>
+            <div id="api-status-msg" class="text-xs text-emerald-600 mt-2 hidden">API 키가 안전하게 로컬에 저장되었습니다.</div>
+        </div>
+
+        <!-- Hero Introduction Section -->
+        <div class="text-center max-w-2xl mx-auto mb-10">
+            <span class="px-3 py-1 text-xs font-semibold text-primary-600 bg-primary-50 rounded-full border border-primary-100 uppercase tracking-wide">
+                5형식 완전 정복 프로젝트
+            </span>
+            <h2 class="text-3xl font-extrabold text-slate-900 mt-3 tracking-tight sm:text-4xl">
+                어떤 영어 문장이든<br><span class="bg-gradient-to-r from-primary-600 to-indigo-600 bg-clip-text text-transparent">몇 형식인지 실시간 분석</span>해 드립니다
+            </h2>
+            <p class="text-slate-500 mt-3 text-base">
+                문법 오류 진단, 교정된 문장의 완벽한 성분(주어·동사·목적어·보어·수식어) 시각화, AI 오디오 발음까지 한 번에 학습하세요.
+            </p>
+        </div>
+
+        <!-- Two Column Workspace Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left Panel: Input Area & Quick Presets -->
+            <div class="lg:col-span-5 space-y-6">
+                <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-premium">
+                    <label for="sentence-input" class="block text-sm font-semibold text-slate-700 mb-2 flex justify-between items-center">
+                        <span>영어 문장 입력하기</span>
+                        <span class="text-xs font-normal text-slate-400" id="char-counter">0 / 200자</span>
+                    </label>
+                    <textarea id="sentence-input" rows="4" maxlength="200" placeholder="예: I'm doing eat apple 또는 He made me happy..." class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition duration-200 text-slate-800 font-medium placeholder-slate-400 shadow-inner-soft resize-none" oninput="updateCounter()"></textarea>
+                    
+                    <button id="analyze-btn" onclick="startAnalysis()" class="w-full mt-4 bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white font-semibold py-3.5 px-6 rounded-xl transition duration-300 shadow-md shadow-primary-500/10 flex items-center justify-center gap-2 transform hover:-translate-y-0.5 active:translate-y-0">
+                        <i data-lucide="sparkles" class="w-5 h-5 animate-pulse"></i>
+                        <span>구조 및 형식 분석하기</span>
+                    </button>
+                </div>
+
+                <!-- Quick Presets -->
+                <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <i data-lucide="play-circle" class="w-4 h-4"></i> 테스트 추천 예문
+                    </h3>
+                    <div class="space-y-2.5">
+                        <button onclick="loadPreset('I\'m doing eat apple')" class="w-full text-left bg-white p-3 rounded-xl border border-slate-200/60 hover:border-primary-400 hover:bg-primary-50/20 text-xs text-slate-600 font-medium transition duration-200 flex items-center justify-between group">
+                            <span>"I'm doing eat apple" <span class="text-[10px] text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded ml-1">오류 예문</span></span>
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-primary-500 transition duration-200"></i>
+                        </button>
+                        <button onclick="loadPreset('The birds sing sweetly in the morning.')" class="w-full text-left bg-white p-3 rounded-xl border border-slate-200/60 hover:border-primary-400 hover:bg-primary-50/20 text-xs text-slate-600 font-medium transition duration-200 flex items-center justify-between group">
+                            <span>"The birds sing sweetly in the morning." <span class="text-[10px] text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded ml-1">1형식</span></span>
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-primary-500 transition duration-200"></i>
+                        </button>
+                        <button onclick="loadPreset('He became a famous scientist last year.')" class="w-full text-left bg-white p-3 rounded-xl border border-slate-200/60 hover:border-primary-400 hover:bg-primary-50/20 text-xs text-slate-600 font-medium transition duration-200 flex items-center justify-between group">
+                            <span>"He became a famous scientist." <span class="text-[10px] text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded ml-1">2형식</span></span>
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-primary-500 transition duration-200"></i>
+                        </button>
+                        <button onclick="loadPreset('My grandmother told me a funny story.')" class="w-full text-left bg-white p-3 rounded-xl border border-slate-200/60 hover:border-primary-400 hover:bg-primary-50/20 text-xs text-slate-600 font-medium transition duration-200 flex items-center justify-between group">
+                            <span>"My grandmother told me a funny story." <span class="text-[10px] text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded ml-1">4형식</span></span>
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-primary-500 transition duration-200"></i>
+                        </button>
+                        <button onclick="loadPreset('The news made us very happy.')" class="w-full text-left bg-white p-3 rounded-xl border border-slate-200/60 hover:border-primary-400 hover:bg-primary-50/20 text-xs text-slate-600 font-medium transition duration-200 flex items-center justify-between group">
+                            <span>"The news made us very happy." <span class="text-[10px] text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded ml-1">5형식</span></span>
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 text-primary-500 transition duration-200"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Dynamic AI Analysis Outputs -->
+            <div class="lg:col-span-7">
+                
+                <!-- Welcome/Empty State Placeholder -->
+                <div id="empty-state" class="bg-white border border-dashed border-slate-200 rounded-2xl p-12 text-center shadow-sm">
+                    <div class="w-16 h-16 bg-primary-50 text-primary-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="book-open" class="w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-800">분석을 기다리는 중입니다</h3>
+                    <p class="text-sm text-slate-500 mt-2 max-w-sm mx-auto">
+                        왼쪽 입력창에 영어 문장을 입력하시거나 예문을 선택해 '형식 분석하기' 버튼을 눌러주세요.
+                    </p>
+                </div>
+
+                <!-- Loading State Spinner -->
+                <div id="loading-state" class="hidden bg-white border border-slate-100 rounded-2xl p-12 text-center shadow-premium">
+                    <div class="relative w-20 h-20 mx-auto mb-6">
+                        <div class="absolute inset-0 rounded-full border-4 border-slate-100"></div>
+                        <div class="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin"></div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <i data-lucide="brain-circuit" class="w-8 h-8 text-primary-500 animate-pulse"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-800 animate-pulse">인공지능이 문장 구조 분석 중...</h3>
+                    <p class="text-sm text-slate-400 mt-2">단어들의 문법적 역할을 세밀하게 분해하고 있습니다.</p>
+                </div>
+
+                <!-- Results View -->
+                <div id="results-view" class="hidden space-y-6">
+                    
+                    <!-- Grammar Health Banner -->
+                    <div id="grammar-health-banner" class="rounded-2xl p-4 border flex items-start gap-3.5 transition duration-300">
+                        <!-- Dynamic Icon Inserted here -->
+                        <div id="banner-icon-container" class="p-2 rounded-xl text-white"></div>
+                        <div>
+                            <h4 id="banner-title" class="font-bold text-sm"></h4>
+                            <p id="banner-description" class="text-xs mt-0.5 leading-relaxed"></p>
+                        </div>
+                    </div>
+
+                    <!-- Main Sentence Correction Card -->
+                    <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-premium space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">분석된 문장</span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="speakSentence()" id="speak-btn" class="p-2 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-xl transition duration-200 flex items-center gap-1.5 text-xs font-medium" title="AI 발음 듣기">
+                                    <i data-lucide="volume-2" class="w-4 h-4"></i>
+                                    <span>듣기</span>
+                                </button>
+                                <button onclick="copyCorrectedText()" class="p-2 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-xl transition duration-200 flex items-center gap-1.5 text-xs font-medium" title="복사하기">
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                    <span>복사</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Sentences comparison -->
+                        <div class="space-y-3">
+                            <div id="original-sentence-display-container" class="hidden">
+                                <span class="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full">원래 입력한 문장</span>
+                                <p id="original-sentence-text" class="text-md text-slate-400 line-through mt-1 font-medium italic"></p>
+                            </div>
+                            <div>
+                                <span id="corrected-sentence-badge" class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">최종 분석 문장</span>
+                                <p id="corrected-sentence-text" class="text-xl font-bold text-slate-900 tracking-wide mt-1 leading-relaxed"></p>
+                                <p id="translation-text" class="text-sm text-slate-500 font-medium mt-1"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Mapping Card -->
+                    <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-premium space-y-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-50 pb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-lg flex items-center gap-2">
+                                    <i data-lucide="layers" class="w-5 h-5 text-primary-500"></i> 문장 구조 인터랙티브 맵
+                                </h3>
+                                <p class="text-xs text-slate-500 mt-0.5">단어를 클릭하면 핵심 역할과 원인 설명을 볼 수 있습니다.</p>
+                            </div>
+                            <!-- Big Circle Badge for Sentence Pattern -->
+                            <div class="self-start sm:self-center bg-gradient-to-tr from-primary-600 to-indigo-500 text-white rounded-2xl px-4 py-2 flex items-center gap-2 shadow-lg shadow-primary-500/10">
+                                <span id="form-badge-number" class="text-2xl font-black">5</span>
+                                <div class="text-left">
+                                    <div class="text-[10px] text-primary-100 font-medium tracking-tight uppercase leading-none">SENTENCE FORM</div>
+                                    <div id="form-badge-pattern" class="text-xs font-bold leading-none mt-1">S + V + O + C</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Color Legend mapping S V O C M -->
+                        <div class="flex flex-wrap gap-2 text-[11px] font-bold">
+                            <span class="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> 주어 (S)
+                            </span>
+                            <span class="px-2.5 py-1 bg-red-50 text-red-700 border border-red-100 rounded-lg flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> 동사 (V)
+                            </span>
+                            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 목적어 (O)
+                            </span>
+                            <span class="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-100 rounded-lg flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span> 보어 (C)
+                            </span>
+                            <span class="px-2.5 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> 수식어 (M)
+                            </span>
+                        </div>
+
+                        <!-- The Word Map Container -->
+                        <div id="interactive-words-container" class="flex flex-wrap gap-2.5 p-4 bg-slate-50 rounded-xl border border-slate-200/50 min-h-[80px] items-center">
+                            <!-- Words will be dynamically injected here with role-based colors -->
+                        </div>
+
+                        <!-- Word explanation card displayed when word is clicked -->
+                        <div id="word-detail-box" class="p-4 bg-primary-50/50 border border-primary-100 rounded-xl hidden">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span id="detail-word-text" class="font-bold text-slate-900 text-base"></span>
+                                <span id="detail-word-badge" class="px-2 py-0.5 rounded-lg text-xs font-bold"></span>
+                            </div>
+                            <p id="detail-word-desc" class="text-slate-600 text-xs leading-relaxed"></p>
+                        </div>
+                    </div>
+
+                    <!-- Comprehensive Grammar Explanation Card -->
+                    <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-premium space-y-4">
+                        <h3 class="font-bold text-slate-900 text-lg flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-5 h-5 text-primary-500"></i> 문장 구조 상세 해설
+                        </h3>
+                        <div id="detailed-explanation-container" class="text-sm text-slate-600 leading-relaxed space-y-3 prose max-w-none">
+                            <!-- Detailed analysis and pedagogical explanation in markdown format -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- History Library Section -->
+        <section id="history-section" class="mt-16 border-t border-slate-200/60 pt-10">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        <i data-lucide="bookmark" class="w-5 h-5 text-indigo-500"></i> 마이 학습 보관함
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-1">내가 이전에 분석했던 문장들을 모아 복습할 수 있습니다.</p>
+                </div>
+                <button onclick="clearHistory()" class="text-xs font-semibold text-rose-500 hover:text-rose-700 flex items-center gap-1 bg-rose-50 px-3 py-1.5 rounded-lg transition duration-200">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 전체 삭제
+                </button>
+            </div>
+
+            <!-- Empty library notice -->
+            <div id="history-empty" class="bg-white border border-slate-100 rounded-2xl p-8 text-center text-slate-500 shadow-sm">
+                보관함이 비어 있습니다. 문장 형식을 분석하면 이곳에 자동으로 기록됩니다.
+            </div>
+
+            <!-- History grid list -->
+            <div id="history-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden">
+                <!-- Saved items injected here -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-8 border-t border-slate-800 mt-20">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-3">
+            <div class="flex items-center justify-center space-x-2 text-white">
+                <i data-lucide="sparkles" class="w-5 h-5 text-primary-400"></i>
+                <span class="font-bold tracking-wide">English Sentence Pattern Analyzer</span>
+            </div>
+            <p class="text-xs max-w-md mx-auto leading-relaxed">
+                Gemini 3.1 Flash AI 모델을 탑재하여 언제나 완벽하고 자연스러운 영어 학습 여정을 보조해 주는 실시간 교정 어플리케이션입니다.
+            </p>
+            <p class="text-[11px] text-slate-600 mt-4">&copy; 2026 AI English Hub. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Global State Variables
+        let currentAnalysisResult = null;
+        let isTtsPlaying = false;
+        let activeSpeakerSource = null;
+
+        // Initialize Lucide Icons on load
+        window.onload = function() {
+            lucide.createIcons();
+            loadHistory();
+            
+            // Check for saved API Key
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) {
+                document.getElementById('api-key-input').value = savedKey;
+            }
+        };
+
+        function updateCounter() {
+            const val = document.getElementById('sentence-input').value;
+            document.getElementById('char-counter').innerText = `${val.length} / 200자`;
+        }
+
+        function loadPreset(sentence) {
+            document.getElementById('sentence-input').value = sentence;
+            updateCounter();
+            // Smooth scroll to input
+            document.getElementById('sentence-input').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            panel.classList.toggle('hidden');
+        }
+
+        function saveApiKey() {
+            const key = document.getElementById('api-key-input').value.trim();
+            localStorage.setItem('gemini_api_key', key);
+            
+            const msg = document.getElementById('api-status-msg');
+            msg.classList.remove('hidden');
+            setTimeout(() => msg.classList.add('hidden'), 3000);
+        }
+
+        // exponential backoff fetch wrapper
+        async function fetchWithBackoff(url, options, retries = 3, delay = 1000) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    if (response.status === 429 && retries > 0) {
+                        await new Promise(res => setTimeout(res, delay));
+                        return fetchWithBackoff(url, options, retries - 1, delay * 2);
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response;
+            } catch (error) {
+                if (retries > 0) {
+                    await new Promise(res => setTimeout(res, delay));
+                    return fetchWithBackoff(url, options, retries - 1, delay * 2);
+                }
+                throw error;
+            }
+        }
+
+        async function startAnalysis() {
+            const sentence = document.getElementById('sentence-input').value.trim();
+            if (!sentence) {
+                alert('영어 문장을 입력해 주세요!');
+                return;
+            }
+
+            // UI Switching to Loading State
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('results-view').classList.add('hidden');
+            document.getElementById('loading-state').classList.remove('hidden');
+
+            const apiKey = localStorage.getItem('gemini_api_key') || "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const systemPrompt = `You are an expert English grammar teacher for Korean students. 
+Analyze the input English sentence based on the standard Korean 5-sentence pattern system (5형식).
+If the sentence has grammatical errors, specify them, explain why, and output a corrected version.
+Always break down the CORRECTED sentence completely into core components: Subject(S), Verb(V), Object(O), Complement(C), and Modifier(M). Every single word/phrase in the corrected sentence must belong to exactly one of these components.
+
+Return ONLY a structured JSON response matching the required schema exactly. Do not add any markdown wrapper like \`\`\`json outside the content.`;
+
+            const payload = {
+                contents: [{
+                    parts: [{
+                        text: `Analyze the sentence: "${sentence}"`
+                    }]
+                }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            originalSentence: { "type": "STRING" },
+                            isValid: { "type": "BOOLEAN" },
+                            grammarFeedback: { "type": "STRING", "description": "Korean description explaining why the sentence is grammatically correct or incorrect. Max 2-3 sentences." },
+                            correctedSentence: { "type": "STRING" },
+                            sentenceForm: { "type": "INTEGER", "description": "The pattern number: 1, 2, 3, 4, or 5" },
+                            components: {
+                                type: "ARRAY",
+                                description: "Sequential list of words or phrases representing the entire corrected sentence.",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        word: { "type": "STRING", "description": "The exact word or contiguous phrase from the corrected sentence." },
+                                        role: { "type": "STRING", "description": "S, V, O, C, or M" },
+                                        roleName: { "type": "STRING", "description": "주어, 동사, 목적어, 보어, 수식어" },
+                                        explanation: { "type": "STRING", "description": "Brief explanation why this word/phrase plays this role in Korean." }
+                                    },
+                                    required: ["word", "role", "roleName", "explanation"]
+                                }
+                            },
+                            translation: { "type": "STRING", "description": "Korean translation of the corrected sentence." },
+                            detailedExplanation: { "type": "STRING", "description": "Detailed explanation of the sentence form, components, and pedagogical rules in Korean. Format using beautiful line breaks." }
+                        },
+                        required: ["originalSentence", "isValid", "grammarFeedback", "correctedSentence", "sentenceForm", "components", "translation", "detailedExplanation"]
+                    }
+                },
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                }
+            };
+
+            try {
+                const response = await fetchWithBackoff(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                const rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (!rawJson) {
+                    throw new Error("올바른 AI 응답데이터를 받지 못했습니다.");
+                }
+
+                const result = JSON.parse(rawJson);
+                currentAnalysisResult = result;
+                
+                renderResults(result);
+                saveToHistory(result);
+
+            } catch (error) {
+                console.error(error);
+                alert("분석 도중 오류가 발생했습니다. 다시 한번 시도해 주세요.");
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+            }
+        }
+
+        function renderResults(result) {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('results-view').classList.remove('hidden');
+
+            // 1. Health Banner Configuration
+            const banner = document.getElementById('grammar-health-banner');
+            const iconContainer = document.getElementById('banner-icon-container');
+            const bTitle = document.getElementById('banner-title');
+            const bDesc = document.getElementById('banner-description');
+
+            if (result.isValid) {
+                banner.className = "rounded-2xl p-4 border border-emerald-100 bg-emerald-50 text-emerald-800 flex items-start gap-3.5";
+                iconContainer.className = "p-2 rounded-xl bg-emerald-500 text-white";
+                iconContainer.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i>';
+                bTitle.innerText = "완벽한 문법입니다!";
+                bDesc.innerText = result.grammarFeedback || "훌륭합니다. 격식과 문법 조건에 완벽히 충족하는 영문장입니다.";
+            } else {
+                banner.className = "rounded-2xl p-4 border border-rose-100 bg-rose-50 text-rose-800 flex items-start gap-3.5";
+                iconContainer.className = "p-2 rounded-xl bg-rose-500 text-white";
+                iconContainer.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5"></i>';
+                bTitle.innerText = "수정할 부분 발견!";
+                bDesc.innerText = result.grammarFeedback;
+            }
+
+            // 2. Sentences Set
+            if (!result.isValid) {
+                document.getElementById('original-sentence-display-container').classList.remove('hidden');
+                document.getElementById('original-sentence-text').innerText = result.originalSentence;
+            } else {
+                document.getElementById('original-sentence-display-container').classList.add('hidden');
+            }
+            document.getElementById('corrected-sentence-text').innerText = result.correctedSentence;
+            document.getElementById('translation-text').innerText = result.translation;
+
+            // 3. Form Badges Setup
+            document.getElementById('form-badge-number').innerText = result.sentenceForm;
+            const formulas = {
+                1: "S + V",
+                2: "S + V + C",
+                3: "S + V + O",
+                4: "S + V + I.O + D.O",
+                5: "S + V + O + O.C"
+            };
+            document.getElementById('form-badge-pattern').innerText = formulas[result.sentenceForm] || "S + V";
+
+            // 4. Interactive Word Mapping Render
+            const mapContainer = document.getElementById('interactive-words-container');
+            mapContainer.innerHTML = '';
+            document.getElementById('word-detail-box').classList.add('hidden');
+
+            const colorClasses = {
+                S: "bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100",
+                V: "bg-red-50 text-red-800 border-red-200 hover:bg-red-100",
+                O: "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100",
+                C: "bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100",
+                M: "bg-slate-100 text-slate-800 border-slate-300 hover:bg-slate-200"
+            };
+
+            const roleBadges = {
+                S: "bg-blue-500 text-white",
+                V: "bg-red-500 text-white",
+                O: "bg-emerald-500 text-white",
+                C: "bg-purple-500 text-white",
+                M: "bg-slate-500 text-white"
+            };
+
+            result.components.forEach((comp, idx) => {
+                const btn = document.createElement('button');
+                const colClass = colorClasses[comp.role] || "bg-slate-50 border-slate-200";
+                btn.className = `px-3 py-2 border rounded-xl text-sm font-bold tracking-wide transition duration-200 cursor-pointer shadow-sm transform active:scale-95 ${colClass}`;
+                btn.innerHTML = `${comp.word} <span class="text-[10px] opacity-70 ml-1 font-semibold">${comp.role}</span>`;
+                
+                btn.onclick = () => {
+                    document.getElementById('detail-word-text').innerText = `"${comp.word}"`;
+                    
+                    const badge = document.getElementById('detail-word-badge');
+                    badge.innerText = `${comp.roleName} (${comp.role})`;
+                    badge.className = `px-2.5 py-0.5 rounded-lg text-xs font-bold ${roleBadges[comp.role] || 'bg-slate-500'}`;
+                    
+                    document.getElementById('detail-word-desc').innerText = comp.explanation;
+                    document.getElementById('word-detail-box').classList.remove('hidden');
+                    
+                    // Smooth visual bounce on selection
+                    btn.classList.add('scale-105');
+                    setTimeout(() => btn.classList.remove('scale-105'), 150);
+                };
+
+                mapContainer.appendChild(btn);
+            });
+
+            // 5. Detailed Explanation Injection
+            const explanationContainer = document.getElementById('detailed-explanation-container');
+            explanationContainer.innerHTML = result.detailedExplanation
+                .split('\n')
+                .map(line => line.trim() ? `<p class="leading-relaxed mb-2">${line}</p>` : '<div class="h-2"></div>')
+                .join('');
+
+            lucide.createIcons();
+            
+            // Auto smooth scroll to result
+            document.getElementById('results-view').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcm16, sampleRate) {
+            const buffer = new ArrayBuffer(44 + pcm16.length * 2);
+            const view = new DataView(buffer);
+
+            // Write Chunk Identifiers
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + pcm16.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true); // raw PCM format
+            view.setUint16(22, 1, true); // single channel
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true); // block alignment
+            view.setUint16(34, 16, true); // bits per sample
+            writeString(view, 36, 'data');
+            view.setUint32(40, pcm16.length * 2, true);
+
+            // Append PCM frames
+            for (let i = 0; i < pcm16.length; i++) {
+                view.setInt16(44 + i * 2, pcm16[i], true);
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        // Play the TTS audio
+        async function speakSentence() {
+            if (!currentAnalysisResult) return;
+            
+            const btn = document.getElementById('speak-btn');
+            if (isTtsPlaying && activeSpeakerSource) {
+                activeSpeakerSource.pause();
+                isTtsPlaying = false;
+                btn.innerHTML = '<i data-lucide="volume-2" class="w-4 h-4"></i> <span>듣기</span>';
+                lucide.createIcons();
+                return;
+            }
+
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>로딩중</span>';
+            lucide.createIcons();
+
+            const textToSpeak = currentAnalysisResult.correctedSentence;
+            const apiKey = localStorage.getItem('gemini_api_key') || "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: `Read cleanly and naturally: ${textToSpeak}` }]
+                }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: "Zephyr" } // Bright voice
+                        }
+                    }
+                }
+            };
+
+            try {
+                const response = await fetchWithBackoff(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                const part = data?.candidates?.[0]?.content?.parts?.[0];
+                const base64Audio = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (base64Audio && mimeType && mimeType.startsWith("audio/")) {
+                    const sampleRate = parseInt(mimeType.match(/rate=(\d+)/)[1], 10);
+                    const pcmBuffer = base64ToArrayBuffer(base64Audio);
+                    const pcm16 = new Int16Array(pcmBuffer);
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+
+                    // Stop current voice if playing
+                    if (activeSpeakerSource) {
+                        activeSpeakerSource.pause();
+                    }
+
+                    const audio = new Audio(audioUrl);
+                    activeSpeakerSource = audio;
+                    isTtsPlaying = true;
+
+                    btn.innerHTML = '<i data-lucide="square" class="w-4 h-4"></i> <span>정지</span>';
+                    lucide.createIcons();
+
+                    audio.play();
+                    audio.onended = () => {
+                        isTtsPlaying = false;
+                        btn.innerHTML = '<i data-lucide="volume-2" class="w-4 h-4"></i> <span>듣기</span>';
+                        lucide.createIcons();
+                    };
+                } else {
+                    throw new Error("TTS payload extraction failed.");
+                }
+
+            } catch (error) {
+                console.error(error);
+                // System Fallback using Web Speech API if API fails or network issue occurs
+                const fallbackUtterance = new SpeechSynthesisUtterance(textToSpeak);
+                fallbackUtterance.lang = 'en-US';
+                fallbackUtterance.rate = 0.9;
+                
+                btn.innerHTML = '<i data-lucide="volume-2" class="w-4 h-4 animate-bounce"></i> <span>재생중</span>';
+                lucide.createIcons();
+                
+                window.speechSynthesis.speak(fallbackUtterance);
+                fallbackUtterance.onend = () => {
+                    isTtsPlaying = false;
+                    btn.innerHTML = '<i data-lucide="volume-2" class="w-4 h-4"></i> <span>듣기</span>';
+                    lucide.createIcons();
+                };
+            }
+        }
+
+        function copyCorrectedText() {
+            if (!currentAnalysisResult) return;
+            const textToCopy = currentAnalysisResult.correctedSentence;
+            
+            // Standard fallback copy to make sure it functions correctly inside cross-origin environments
+            const tempTextArea = document.createElement("textarea");
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+
+            alert('교정된 문장이 클립보드에 복사되었습니다.');
+        }
+
+        function saveToHistory(item) {
+            let history = JSON.parse(localStorage.getItem('english_study_history') || '[]');
+            
+            // Avoid adding identical sentence repeatedly
+            history = history.filter(h => h.originalSentence !== item.originalSentence);
+            
+            // Add on top
+            history.unshift({
+                originalSentence: item.originalSentence,
+                correctedSentence: item.correctedSentence,
+                sentenceForm: item.sentenceForm,
+                translation: item.translation,
+                timestamp: new Date().toLocaleDateString('ko-KR')
+            });
+
+            // Keep maximum of 12 records
+            if (history.length > 12) history.pop();
+
+            localStorage.setItem('english_study_history', JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('english_study_history') || '[]');
+            const listEl = document.getElementById('history-list');
+            const emptyEl = document.getElementById('history-empty');
+
+            if (history.length === 0) {
+                listEl.classList.add('hidden');
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+
+            listEl.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+            listEl.innerHTML = '';
+
+            history.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between";
+                
+                card.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">${item.sentenceForm}형식</span>
+                            <span class="text-[9px] text-slate-400 font-medium">${item.timestamp}</span>
+                        </div>
+                        <h4 class="font-bold text-slate-900 text-sm line-clamp-2 leading-relaxed">"${item.correctedSentence}"</h4>
+                        <p class="text-xs text-slate-500 line-clamp-1">${item.translation}</p>
+                    </div>
+                    <button onclick="loadHistoryItem('${encodeURIComponent(JSON.stringify(item))}')" class="mt-4 w-full py-1.5 bg-slate-50 hover:bg-primary-50 hover:text-primary-600 text-[11px] font-bold text-slate-600 rounded-lg transition duration-200">
+                        열기 및 복습하기
+                    </button>
+                `;
+                listEl.appendChild(card);
+            });
+        }
+
+        function loadHistoryItem(encodedData) {
+            const data = JSON.parse(decodeURIComponent(encodedData));
+            document.getElementById('sentence-input').value = data.originalSentence;
+            updateCounter();
+            startAnalysis();
+        }
+
+        function clearHistory() {
+            if (confirm('보관함의 모든 저장 항목을 완전히 비우시겠습니까?')) {
+                localStorage.removeItem('english_study_history');
+                loadHistory();
+            }
+        }
+    </script>
+</body>
+</html>
